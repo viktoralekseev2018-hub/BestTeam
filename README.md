@@ -1,124 +1,133 @@
-# WEB-AGENT
-
-Кроссплатформенный фоновый HTTP-клиент для удалённого управления задачами.
-
-## Описание проекта
-
-WEB-AGENT — это автономный фоновый агент, который:
-
-1. Регистрируется на сервере и получает `access_code`
-2. Периодически опрашивает сервер в поиске новых заданий
-3. Выполняет задания: запуск программ, выполнение команд, передача файлов
-4. Отправляет результаты на сервер (multipart/form-data)
-5. Логирует все операции в файл и stdout
-
-**API сервера:** `https://xdev.arkcom.ru:9999`
-
-## Статус
-
-**ЛР №1 — Инициализация проекта**
-
-| Компонент | Статус |
-|---|---|
-| Config (загрузка config.json) | Реализован |
-| Logger (spdlog) | Реализован |
-| HttpClient (HTTP через cpr) | Заглушка (ЛР №3) |
-| Agent (цикл опроса) | Заглушка (ЛР №3) |
-| Тесты среды и конфига | Реализованы |
-
-## Требования
-
-| Инструмент | Версия |
-|---|---|
-| Компилятор | GCC 10+ / Clang 12+ / MSVC 2019+ (поддержка C++17) |
-| CMake | 3.16+ |
-| Git | 2.x |
-| libcurl | Системная (Linux/macOS) или bundled (Windows через cpr) |
-
-## Быстрый старт
-
-### Linux / macOS
-
-```bash
-git clone <repo-url> web-agent
-cd web-agent
-
-# Настроить конфигурацию
-cp config.json.example config.json  # или отредактировать config.json
-
-# Сборка
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DWA_BUILD_TESTS=ON
-cmake --build build -j$(nproc)
-
-# Запуск
-./build/web_agent --config config.json
-```
-
-### Windows
-
-```powershell
-git clone <repo-url> web-agent
-cd web-agent
-
-# Сборка
-cmake -B build -DWA_BUILD_TESTS=ON
-cmake --build build --config Debug
-
-# Запуск
-.\build\Debug\web_agent.exe --config config.json
-```
-
-## Конфигурация
-
-Файл `config.json` в корне проекта:
-
-| Поле | Тип | Обязательное | По умолчанию | Описание |
-|---|---|---|---|---|
-| `uid` | string | **Да** | — | Уникальный ID агента |
-| `descr` | string | Нет | `"web-agent"` | Описание агента |
-| `server_url` | string | **Да** | — | Base URL сервера |
-| `poll_interval_sec` | int | Нет | `10` | Интервал опроса (сек) |
-| `task_directory` | string | Нет | `"./tasks"` | Директория заданий |
-| `result_directory` | string | Нет | `"./results"` | Директория результатов |
-| `log_file` | string | Нет | `"./agent.log"` | Путь к файлу лога |
-| `log_level` | string | Нет | `"info"` | Уровень: debug/info/warn/error |
-| `access_code` | string | Нет | `""` | Предварительно выданный токен; если заполнен, регистрация пропускается |
-| `max_parallel_tasks` | int | Нет | `4` | Макс. параллельных заданий |
-| `retry_count` | int | Нет | `3` | Кол-во повторных попыток |
-| `retry_delay_sec` | int | Нет | `5` | Начальная задержка retry (сек) |
-
-Если `access_code` пустой, агент сначала зарегистрируется, получит токен и сохранит его в `config.json`.
-
-## Сборка
-
-```bash
-# Debug (с тестами)
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DWA_BUILD_TESTS=ON
-cmake --build build
-
-# Release (без тестов)
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DWA_BUILD_TESTS=OFF
-cmake --build build
-```
-
-## Запуск тестов
-
-```bash
-cd build
-ctest --output-on-failure
-# или напрямую:
-./wa_tests
-```
-
-## Структура проекта
+Web-Agent
+Автономный агент для распределённого выполнения задач
+ 
+Обзор
+Это кроссплатформенный клиент-агент, предназначенный для получения, обработки и отправки задач с удалённого сервера управления.
+Агент работает независимо, автоматически регистрируется в системе и выполняет команды без участия пользователя.
+💡 Подходит для:
+•	распределённых систем
+•	CI/CD воркеров
+•	фоновых вычислений
+•	удалённого управления узлами
+ 
+Ключевые особенности
+•	Кроссплатформенность
+Поддержка Windows, Linux и macOS без изменений кода
+•	Безопасное соединение
+Работа через HTTPS (OpenSSL)
+•	араллельное выполнение задач
+Отдельные потоки для получения и выполнения задач
+•	Саморегистрация агента
+Генерация UID + получение access_code
+•	Потокобезопасный логгер
+Без конфликтов при записи из разных потоков
+ 
+Технологический стек
+Компонент	Используется
+Язык	C++17
+Сборка	CMake ≥ 3.10
+HTTP клиент	cpp-httplib
+Шифрование	OpenSSL
+Конфигурация	INI
+ 
+ 
+🧩 Компоненты
+•	Agent — центральный управляющий класс
+•	Poll Thread — запрашивает задачи с сервера
+•	Task Queue — потокобезопасная очередь
+•	Worker Thread — исполняет задачи
+•	ServerClient — HTTP взаимодействие
+•	TaskExecutor — логика выполнения задач
+•	Logger — централизованное логирование
+•	Config — управление настройками
+ 
+ 
 
 
-## Команда
+🛠 Сборка проекта
+git clone https://github.com/viktoralekseev2018-hub/DeepSeekers
+
+mkdir build && cd build
+cmake ..
+cmake --build .
+Бинарник появится в:
+/build/cardioagent
+ 
+Быстрый старт
+1. Создать конфиг
+cp config/agent.ini.example config/agent.ini
+ 
+2. Заполнить обязательные поля
+server_url = https://your-server.com:9999
+ 
+3. Опциональные настройки
+descr = worker-node-1
+poll_interval = 10
+max_poll_interval = 300
+ 
+4. Автоматические поля (не трогать)
+UID=
+access_code=
+ 
+5. Запуск
+./build/cardioagent
+ 
+API взаимодействие
+Регистрация агента
+POST /api/wa_reg/
+Тело запроса:
+{
+  "UID": "auto-generated",
+  "descr": "worker-node"
+}
+Ответ:
+{
+  "access_code": "...",
+  "code_response": "0"
+}
+ 
+Получение задачи
+POST /api/wa_task/
+{
+  "UID": "...",
+  "access_code": "..."
+}
+Ответ (если есть задача):
+{
+  "task_code": "...",
+  "session_id": "...",
+  "status": "RUN"
+}
+ 
+Отправка результата
+POST /api/wa_result/
+Формат: multipart/form-data
+Поле	Тип	Описание
+result_code	int	0 — OK
+result	JSON	метаданные
+files	file[]	файлы
+ 
+Структура проекта
+CardioAgent/
+│
+├── include/        # Заголовки
+├── src/            # Реализация
+├── config/         # Конфигурация
+├── lib/            # Зависимости
+├── scripts/        # Утилиты
+├── logs/           # Логи
+├── temp/           # Временные файлы
+└── CMakeLists.txt
+ 
+Роли в проекте
+Роль	Ответственность
+Тимлид	Алексеев Виктор
+Архитектор	Алексеев Виктор
+Разработчик	Стрижов Тимофей
+Тестировщик	Стрижов Тимофей
+Техписатель	Стрижов Тимофей
 
 
-## Лицензия
-
-MIT License. See [LICENSE](LICENSE) for details.
 
 <img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/ed8009b5-8e13-43f6-9347-762f284a0c7a" />
 
