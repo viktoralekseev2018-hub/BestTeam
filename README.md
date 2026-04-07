@@ -45,7 +45,7 @@ HTTP клиент	cpp-httplib
 
 
 🛠 Сборка проекта
-git clone https://github.com/viktoralekseev2018-hub/DeepSeekers
+git clone https://github.com/viktoralekseev2018-hub/DeepSeekers](https://github.com/viktoralekseev2018-hub/BestTeam
 
 mkdir build && cd build
 cmake ..
