@@ -119,3 +119,7 @@ ctest --output-on-failure
 ## Лицензия
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/ed8009b5-8e13-43f6-9347-762f284a0c7a" />
+
+
