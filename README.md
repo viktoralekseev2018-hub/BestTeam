@@ -59,3 +59,8 @@ cd BestTeam
 mkdir build && cd build
 cmake ..
 cmake --build .
+
+
+
+
+<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/822fd791-0e36-45ec-a2e9-ccbd3025b390" />
