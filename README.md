@@ -50,7 +50,6 @@
 - `TaskExecutor` — логика выполнения задач
 - `Logger` — централизованное логирование
 - `Config` — управление настройками
-
 ## Сборка проекта
 
 ```bash
@@ -62,7 +61,3 @@ cmake --build .
 
 
 
-
-## Диаграмма 
-
-<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/3b26f129-2990-4b8a-af83-fa1ca4c0c44f" />
