@@ -63,4 +63,6 @@ cmake --build .
 
 
 
-<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/822fd791-0e36-45ec-a2e9-ccbd3025b390" />
+## Диаграмма 
+
+<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/3b26f129-2990-4b8a-af83-fa1ca4c0c44f" />
