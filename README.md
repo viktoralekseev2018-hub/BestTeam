@@ -61,3 +61,6 @@ cmake --build .
 ```
 
 
+## Диаграмма проекта
+
+<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/b794d103-d21a-4e17-b3a5-794aa2b0b25a" />
