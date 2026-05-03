@@ -1,31 +1,26 @@
 #pragma once
+
 #include <string>
-#include <memory>
+#include <filesystem>
+#include <mutex>
 
-// Forward declaration — не тянем spdlog в каждый заголовок
-namespace spdlog { class logger; }
+// Предварительные объявления
+struct Task;
+struct ExecutionResult;
 
-namespace wa {
-
-/// @brief Обёртка над spdlog. Потокобезопасна.
 class Logger {
 public:
-    /// @brief Инициализировать логгер (вызвать один раз при старте)
-    /// @param log_file  Путь к файлу лога
-    /// @param level     Уровень: "debug" | "info" | "warn" | "error"
-    static void init(const std::string& log_file, const std::string& level = "info");
+    explicit Logger(const std::filesystem::path& log_file);
 
-    /// @brief Получить экземпляр логгера
-    static std::shared_ptr<spdlog::logger>& get();
+    void logTask(const Task& task, const ExecutionResult& result);
+    void logError(const std::string& task_id, const std::string& error);
+    void logInfo(const std::string& message);
+    void logWarning(const std::string& message);
 
 private:
-    static std::shared_ptr<spdlog::logger> instance_;
+    std::filesystem::path log_file_;
+    std::mutex mutex_;
+
+    void write(const std::string& level, const std::string& message);
+    std::string getTimestamp();
 };
-
-/// Макросы для удобного логирования с позицией в коде
-#define WA_LOG_INFO(...)  wa::Logger::get()->info(__VA_ARGS__)
-#define WA_LOG_WARN(...)  wa::Logger::get()->warn(__VA_ARGS__)
-#define WA_LOG_ERROR(...) wa::Logger::get()->error(__VA_ARGS__)
-#define WA_LOG_DEBUG(...) wa::Logger::get()->debug(__VA_ARGS__)
-
-} // namespace wa

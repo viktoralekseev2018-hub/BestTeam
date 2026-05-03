@@ -1,77 +1,84 @@
 #include "config.h"
-#include <nlohmann/json.hpp>
 #include <fstream>
-#include <iomanip>
-#include <stdexcept>
+#include <nlohmann/json.hpp>
 
-namespace wa {
+using json = nlohmann::json;
 
 Config Config::load(const std::string& path) {
+    Config cfg;
+    cfg.config_path = path;
+    cfg.setDefaults();
+
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Config file not found: " + path);
+        throw std::runtime_error("Не удалось открыть файл конфигурации: " + path);
     }
 
-    nlohmann::json j;
     try {
+        json j;
         file >> j;
-    } catch (const nlohmann::json::parse_error& e) {
-        throw std::runtime_error(std::string("Invalid JSON in config: ") + e.what());
+
+        if (j.contains("uid")) cfg.uid = j["uid"].get<std::string>();
+        if (j.contains("server_url")) cfg.server_url = j["server_url"].get<std::string>();
+        if (j.contains("access_code")) cfg.access_code = j["access_code"].get<std::string>();
+        if (j.contains("tasks_folder")) cfg.tasks_folder = j["tasks_folder"].get<std::string>();
+        if (j.contains("results_folder")) cfg.results_folder = j["results_folder"].get<std::string>();
+        if (j.contains("log_file")) cfg.log_file = j["log_file"].get<std::string>();
+        if (j.contains("poll_interval")) cfg.poll_interval = std::chrono::seconds(j["poll_interval"]);
+        if (j.contains("max_poll_interval")) cfg.max_poll_interval = std::chrono::seconds(j["max_poll_interval"]);
+        if (j.contains("timeout")) cfg.timeout = std::chrono::seconds(j["timeout"]);
+        if (j.contains("max_retries")) cfg.max_retries = j["max_retries"];
+        if (j.contains("retry_delay")) cfg.retry_delay = std::chrono::seconds(j["retry_delay"]);
+
+    } catch (const json::exception& e) {
+        throw std::runtime_error("Ошибка парсинга JSON: " + std::string(e.what()));
     }
 
-    Config cfg;
-    cfg.uid        = j.value("uid", "");
-    cfg.descr      = j.value("descr", "web-agent");
-    cfg.server_url = j.value("server_url", "");
-    cfg.poll_interval_sec   = j.value("poll_interval_sec", 10);
-    cfg.retry_count         = j.value("retry_count", 3);
-    cfg.retry_delay_sec     = j.value("retry_delay_sec", 5);
-    cfg.max_parallel_tasks  = j.value("max_parallel_tasks", 4);
-    cfg.task_directory      = j.value("task_directory", "./tasks");
-    cfg.result_directory    = j.value("result_directory", "./results");
-    cfg.log_file            = j.value("log_file", "./agent.log");
-    cfg.log_level           = j.value("log_level", "info");
-    cfg.access_code         = j.value("access_code", "");
-    cfg.source_path         = path;
+    if (!cfg.validate()) {
+        throw std::runtime_error("Проверка конфигурации не пройдена");
+    }
 
-    cfg.validate();
     return cfg;
 }
 
-void Config::validate() const {
-    if (uid.empty()) {
-        throw std::runtime_error("Config validation error: 'uid' is required");
+void Config::save(const std::string& path) const {
+    json j;
+    j["uid"] = uid;
+    j["server_url"] = server_url;
+    j["access_code"] = access_code;
+    j["tasks_folder"] = tasks_folder.string();
+    j["results_folder"] = results_folder.string();
+    j["log_file"] = log_file.string();
+    j["poll_interval"] = poll_interval.count();
+    j["max_poll_interval"] = max_poll_interval.count();
+    j["timeout"] = timeout.count();
+    j["max_retries"] = max_retries;
+    j["retry_delay"] = retry_delay.count();
+
+    std::ofstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Не удалось открыть файл для записи: " + path);
     }
-    if (server_url.empty()) {
-        throw std::runtime_error("Config validation error: 'server_url' is required");
-    }
+    file << j.dump(4);
 }
 
-void Config::save() const {
-    if (source_path.empty()) {
-        throw std::runtime_error("Config save error: source path is empty");
-    }
-
-    nlohmann::json j = {
-        {"uid", uid},
-        {"descr", descr},
-        {"server_url", server_url},
-        {"poll_interval_sec", poll_interval_sec},
-        {"retry_count", retry_count},
-        {"retry_delay_sec", retry_delay_sec},
-        {"max_parallel_tasks", max_parallel_tasks},
-        {"task_directory", task_directory},
-        {"result_directory", result_directory},
-        {"log_file", log_file},
-        {"log_level", log_level},
-        {"access_code", access_code}
-    };
-
-    std::ofstream out(source_path);
-    if (!out.is_open()) {
-        throw std::runtime_error("Config save error: cannot open file " + source_path);
-    }
-    out << std::setw(2) << j << '\n';
+void Config::setDefaults() {
+    uid = "agent-" + std::to_string(std::time(nullptr));
+    access_code.clear();
+    tasks_folder = std::filesystem::current_path() / "tasks";
+    results_folder = std::filesystem::current_path() / "results";
+    log_file = std::filesystem::current_path() / "agent.log";
 }
 
-} // namespace wa
+bool Config::validate() const {
+    if (uid.empty() || server_url.empty()) return false;
+
+    try {
+        std::filesystem::create_directories(tasks_folder);
+        std::filesystem::create_directories(results_folder);
+    } catch (const std::filesystem::filesystem_error&) {
+        return false;
+    }
+
+    return true;
+}

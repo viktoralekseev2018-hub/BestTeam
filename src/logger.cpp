@@ -1,49 +1,61 @@
 #include "logger.h"
+#include "agent.h"
+#include <fstream>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <vector>
-#include <memory>
-#include <stdexcept>
 
-namespace wa {
+Logger::Logger(const std::filesystem::path& log_file) : log_file_(log_file) {
+    spdlog::info("Журнал инициализирован, файл: {}", log_file.string());
+}
 
-std::shared_ptr<spdlog::logger> Logger::instance_;
+void Logger::logTask(const Task& task, const ExecutionResult& result) {
+    std::string message = "Задание " + task.task_id + " выполнено. ";
+    message += "Успех: " + std::string(result.success ? "да" : "нет");
+    message += ", Код возврата: " + std::to_string(result.exit_code);
+    message += ", Выходные файлы: " + std::to_string(result.output_files.size());
 
-void Logger::init(const std::string& log_file, const std::string& level) {
-    std::vector<spdlog::sink_ptr> sinks;
+    write("ИНФО", message);
+}
 
-    // Stdout sink (coloured)
-    auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    sinks.push_back(stdout_sink);
+void Logger::logError(const std::string& task_id, const std::string& error) {
+    write("ОШИБКА", "Задание " + task_id + " не выполнено: " + error);
+}
 
-    // Rotating file sink: 5 MB, 3 rotations
-    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-        log_file, 5 * 1024 * 1024, 3);
-    sinks.push_back(file_sink);
+void Logger::logInfo(const std::string& message) {
+    write("ИНФО", message);
+}
 
-    instance_ = std::make_shared<spdlog::logger>("wa", sinks.begin(), sinks.end());
-    instance_->set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
+void Logger::logWarning(const std::string& message) {
+    write("ПРЕДУПРЕЖДЕНИЕ", message);
+}
 
-    // Set log level
-    if (level == "debug") {
-        instance_->set_level(spdlog::level::debug);
-    } else if (level == "warn" || level == "warning") {
-        instance_->set_level(spdlog::level::warn);
-    } else if (level == "error") {
-        instance_->set_level(spdlog::level::err);
+void Logger::write(const std::string& level, const std::string& message) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::ofstream file(log_file_, std::ios::app);
+    if (file.is_open()) {
+        file << "[" << getTimestamp() << "] [" << level << "] " << message << std::endl;
+    }
+
+    if (level == "ОШИБКА") {
+        spdlog::error(message);
+    } else if (level == "ПРЕДУПРЕЖДЕНИЕ") {
+        spdlog::warn(message);
     } else {
-        instance_->set_level(spdlog::level::info);
+        spdlog::info(message);
     }
-
-    spdlog::register_logger(instance_);
 }
 
-std::shared_ptr<spdlog::logger>& Logger::get() {
-    if (!instance_) {
-        throw std::runtime_error("Logger not initialized. Call Logger::init() first.");
-    }
-    return instance_;
-}
+std::string Logger::getTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
-} // namespace wa
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+    return ss.str();
+}
