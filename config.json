@@ -3,7 +3,7 @@
     "log_file": "./agent.log",
     "max_poll_interval": 300,
     "max_retries": 3,
-    "poll_interval": 15,
+    "poll_interval": 30,
     "results_folder": "./results",
     "retry_delay": 5,
     "server_url": "https://xdev.arkcom.ru:9999/app/webagent1/api",

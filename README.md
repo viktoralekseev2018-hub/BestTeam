@@ -1,121 +1,66 @@
-# WEB-AGENT
+# Web-Agent
 
-Кроссплатформенный фоновый HTTP-клиент для удалённого управления задачами.
+**Автономный агент для распределённого выполнения задач**
 
-## Описание проекта
+## Обзор
 
-WEB-AGENT — это автономный фоновый агент, который:
+Это кроссплатформенный клиент-агент, предназначенный для получения, обработки и отправки задач с удалённого сервера управления.  
+Агент работает независимо, автоматически регистрируется в системе и выполняет команды без участия пользователя.
 
-1. Регистрируется на сервере и получает `access_code`
-2. Периодически опрашивает сервер в поиске новых заданий
-3. Выполняет задания: запуск программ, выполнение команд, передача файлов
-4. Отправляет результаты на сервер (multipart/form-data)
-5. Логирует все операции в файл и stdout
+**Подходит для:**
+- распределённых систем
+- CI/CD воркеров
+- фоновых вычислений
+- удалённого управления узлами
 
-**API сервера:** `https://xdev.arkcom.ru:9999`
+## Ключевые особенности
 
-## Статус
+- **Кроссплатформенность**  
+  Поддержка Windows, Linux и macOS без изменений кода
 
-**ЛР №1 — Инициализация проекта**
+- **Безопасное соединение**  
+  Работа через HTTPS (OpenSSL)
 
-| Компонент | Статус |
-|---|---|
-| Config (загрузка config.json) | Реализован |
-| Logger (spdlog) | Реализован |
-| HttpClient (HTTP через cpr) | Заглушка (ЛР №3) |
-| Agent (цикл опроса) | Заглушка (ЛР №3) |
-| Тесты среды и конфига | Реализованы |
+- **Параллельное выполнение задач**  
+  Отдельные потоки для получения и выполнения задач
 
-## Требования
+- **Саморегистрация агента**  
+  Генерация UID + получение access_code
 
-| Инструмент | Версия |
-|---|---|
-| Компилятор | GCC 10+ / Clang 12+ / MSVC 2019+ (поддержка C++17) |
-| CMake | 3.16+ |
-| Git | 2.x |
-| libcurl | Системная (Linux/macOS) или bundled (Windows через cpr) |
+- **Потокобезопасный логгер**  
+  Без конфликтов при записи из разных потоков
 
-## Быстрый старт
+## Технологический стек
 
-### Linux / macOS
+| Компонент       | Используется     |
+|----------------|------------------|
+| Язык           | C++17            |
+| Сборка         | CMake ≥ 3.10     |
+| HTTP клиент    | cpp-httplib      |
+| Шифрование     | OpenSSL          |
+| Конфигурация   | INI              |
 
-```bash
-git clone <repo-url> web-agent
-cd web-agent
+## Компоненты системы
 
-# Настроить конфигурацию
-cp config.json.example config.json  # или отредактировать config.json
-
-# Сборка
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DWA_BUILD_TESTS=ON
-cmake --build build -j$(nproc)
-
-# Запуск
-./build/web_agent --config config.json
-```
-
-### Windows
-
-```powershell
-git clone <repo-url> web-agent
-cd web-agent
-
-# Сборка
-cmake -B build -DWA_BUILD_TESTS=ON
-cmake --build build --config Debug
-
-# Запуск
-.\build\Debug\web_agent.exe --config config.json
-```
-
-## Конфигурация
-
-Файл `config.json` в корне проекта:
-
-| Поле | Тип | Обязательное | По умолчанию | Описание |
-|---|---|---|---|---|
-| `uid` | string | **Да** | — | Уникальный ID агента |
-| `descr` | string | Нет | `"web-agent"` | Описание агента |
-| `server_url` | string | **Да** | — | Base URL сервера |
-| `poll_interval_sec` | int | Нет | `10` | Интервал опроса (сек) |
-| `task_directory` | string | Нет | `"./tasks"` | Директория заданий |
-| `result_directory` | string | Нет | `"./results"` | Директория результатов |
-| `log_file` | string | Нет | `"./agent.log"` | Путь к файлу лога |
-| `log_level` | string | Нет | `"info"` | Уровень: debug/info/warn/error |
-| `access_code` | string | Нет | `""` | Предварительно выданный токен; если заполнен, регистрация пропускается |
-| `max_parallel_tasks` | int | Нет | `4` | Макс. параллельных заданий |
-| `retry_count` | int | Нет | `3` | Кол-во повторных попыток |
-| `retry_delay_sec` | int | Нет | `5` | Начальная задержка retry (сек) |
-
-Если `access_code` пустой, агент сначала зарегистрируется, получит токен и сохранит его в `config.json`.
-
-## Сборка
+- `Agent` — центральный управляющий класс
+- `Poll Thread` — запрашивает задачи с сервера
+- `Task Queue` — потокобезопасная очередь
+- `Worker Thread` — исполняет задачи
+- `ServerClient` — HTTP взаимодействие
+- `TaskExecutor` — логика выполнения задач
+- `Logger` — централизованное логирование
+- `Config` — управление настройками
+## Сборка проекта
 
 ```bash
-# Debug (с тестами)
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DWA_BUILD_TESTS=ON
-cmake --build build
-
-# Release (без тестов)
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DWA_BUILD_TESTS=OFF
-cmake --build build
+git clone https://github.com/viktoralekseev2018-hub/BestTeam
+cd BestTeam
+mkdir build && cd build
+cmake ..
+cmake --build .
 ```
 
-## Запуск тестов
 
-```bash
-cd build
-ctest --output-on-failure
-# или напрямую:
-./wa_tests
-```
+## Диаграмма проекта
 
-## Структура проекта
-
-
-## Команда
-
-
-## Лицензия
-
-MIT License. See [LICENSE](LICENSE) for details.
+<img width="1024" height="1536" alt="structure" src="https://github.com/user-attachments/assets/b794d103-d21a-4e17-b3a5-794aa2b0b25a" />
